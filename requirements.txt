@@ -1,0 +1,28 @@
+# PaddleOCR CPU 推論
+paddlepaddle==3.3.0
+paddleocr==3.7.0
+
+# 網頁伺服器 (方案 A:手機拍照上傳辨識)
+fastapi==0.141.1
+uvicorn[standard]==0.52.0
+python-multipart==0.0.32
+
+# 產生測試圖片用
+Pillow
+
+# 下載 CORD-v2 資料集樣本用 (scripts/fetch_cord_v2_samples.py)
+# 其實 paddleocr 已經間接依賴這個套件,這裡列出來只是讓依賴關係更明確
+requests
+
+# 第二階段:OCR 後接 LLM 做結構化欄位擷取 (scripts/llm_field_extract.py)
+google-genai
+python-dotenv
+# pydantic 其實已經是 fastapi 的間接依賴,這裡列出來只是讓用途更明確
+pydantic
+
+# 安裝方式:
+#   python -m venv venv
+#   .\venv\Scripts\pip install -r requirements.txt --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/
+#
+# 注意:PaddlePaddle 官方套件庫 (paddlepaddle.org.cn) 才有 CPU 版 wheel,
+# 一般 PyPI 上的 paddlepaddle 可能是空殼或版本不全,務必加上 --extra-index-url。

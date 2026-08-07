@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>拍照快速記帳 Quick Receipt Scanner</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>拍照快速記帳</h1>
+    <p class="en-caption">Quick Receipt Scanner</p>
+  </header>
+
+  <nav class="main-nav">
+    <button class="nav-btn active" data-view="dashboard">
+      <span>總覽</span>
+      <span class="nav-en">Overview</span>
+    </button>
+    <button class="nav-btn" data-view="add">
+      <span>新增紀錄</span>
+      <span class="nav-en">Add</span>
+    </button>
+    <button class="nav-btn" data-view="ledger">
+      <span>紀錄</span>
+      <span class="nav-en">Records</span>
+    </button>
+  </nav>
+
+  <main>
+    <!-- ===================== 總覽 Dashboard ===================== -->
+    <section id="dashboardView">
+      <div class="card month-nav-card">
+        <button class="month-arrow" id="prevMonthBtn">‹</button>
+        <div class="month-label" id="monthLabel">-</div>
+        <button class="month-arrow" id="nextMonthBtn">›</button>
+      </div>
+
+      <div class="summary-cards-row">
+        <div class="summary-card">
+          <div class="summary-card-label"><span>本月支出</span><span class="field-en">Expense</span></div>
+          <div class="summary-card-value expense-color" id="monthExpenseTotal">$0.00</div>
+          <div class="summary-card-delta" id="monthExpenseDelta"></div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label"><span>本月收入</span><span class="field-en">Income</span></div>
+          <div class="summary-card-value income-color" id="monthIncomeTotal">$0.00</div>
+          <div class="summary-card-delta" id="monthIncomeDelta"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="summary-row"><h2>分類佔比<span class="h2-en">By Category</span></h2></div>
+        <div class="donut-wrap">
+          <div class="donut-chart" id="donutChart"></div>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+        <div id="donutEmpty" class="empty-hint-small" style="display:none;">本月尚無支出紀錄<br><span class="en-caption-muted">No expenses this month</span></div>
+      </div>
+
+      <div class="card">
+        <div class="summary-row"><h2>每日消費<span class="h2-en">Daily Spending</span></h2></div>
+        <div class="bar-chart" id="dailyBarChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="summary-row"><h2>本月統計<span class="h2-en">Stats</span></h2></div>
+        <div class="stats-grid" id="statsGrid"></div>
+      </div>
+    </section>
+
+    <!-- ===================== 新增紀錄 ===================== -->
+    <section id="addView" style="display:none;">
+      <div class="card">
+        <div class="tabs">
+          <button class="tab-btn active" data-addtab="scan">拍照辨識<span class="tab-en">Scan</span></button>
+          <button class="tab-btn" data-addtab="manual">手動輸入<span class="tab-en">Manual</span></button>
+        </div>
+
+        <!-- 拍照辨識 -->
+        <div id="scanSubView">
+          <div class="capture-row">
+            <button class="btn" id="cameraBtn">
+              <span>拍照辨識</span>
+              <span class="btn-en">Take Photo</span>
+            </button>
+            <button class="btn secondary" id="galleryBtn">
+              <span>從相簿選擇</span>
+              <span class="btn-en">Choose from Album</span>
+            </button>
+          </div>
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" />
+          <input type="file" id="galleryInput" accept="image/*" />
+          <p id="status"></p>
+        </div>
+
+        <!-- 手動輸入 -->
+        <div id="manualSubView" style="display:none;">
+          <div class="type-toggle">
+            <button class="type-btn active" data-type="expense">支出 Expense</button>
+            <button class="type-btn" data-type="income">收入 Income</button>
+          </div>
+
+          <label class="field-label">金額 <span class="field-en">Amount</span></label>
+          <input type="number" inputmode="decimal" step="0.01" class="field-input" id="manualAmountInput" placeholder="0.00" />
+
+          <label class="field-label">商家 / 名稱 <span class="field-en">Merchant / Name</span></label>
+          <input type="text" class="field-input" id="manualMerchantInput" placeholder="例如: Woolworths" />
+
+          <label class="field-label">分類 <span class="field-en">Category</span></label>
+          <select class="field-input" id="manualCategorySelect"></select>
+
+          <label class="field-label">日期 <span class="field-en">Date</span></label>
+          <input type="date" class="field-input" id="manualDateInput" />
+
+          <label class="field-label">備註 <span class="field-en">Note</span></label>
+          <input type="text" class="field-input" id="manualNoteInput" placeholder="選填" />
+
+          <div class="actions-row">
+            <button class="btn" id="manualSaveBtn">
+              <span>儲存紀錄</span>
+              <span class="btn-en">Save Record</span>
+            </button>
+          </div>
+          <p class="save-status" id="manualSaveStatus"></p>
+        </div>
+      </div>
+
+      <div id="emptyHint" class="empty-hint">
+        <div>拍一張收據或發票試試看,結果會直接顯示在下面。</div>
+        <div class="en-caption-muted">Take a photo of a receipt or invoice to see the results below.</div>
+      </div>
+
+      <div class="card" id="resultSection">
+        <div class="tabs">
+          <button class="tab-btn active" data-imgtab="original">原始照片<span class="tab-en">Original Photo</span></button>
+          <button class="tab-btn" data-imgtab="vis">標框結果<span class="tab-en">Detection Result</span></button>
+        </div>
+        <img id="originalImg" class="preview-img" />
+        <img id="visImg" class="preview-img" style="display:none;" />
+      </div>
+
+      <div class="card" id="listSection" style="display:none;">
+        <div class="summary-row">
+          <h2>辨識出的文字<span class="h2-en">Recognized Text</span></h2>
+          <span id="lineCount"></span>
+        </div>
+        <div id="lineList"></div>
+        <div class="actions-row">
+          <button class="btn secondary" id="copyBtn">
+            <span>複製全部文字</span>
+            <span class="btn-en">Copy All Text</span>
+          </button>
+          <button class="btn secondary" id="jsonBtn">
+            <span>查看原始 JSON</span>
+            <span class="btn-en">View Raw JSON</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card" id="saveRecordSection">
+        <div class="summary-row"><h2>存為記帳紀錄<span class="h2-en">Save as Record</span></h2></div>
+        <p class="hint-text">金額/日期/分類是用簡單規則猜測的,不是 LLM 語意理解,請確認或修改後再儲存。<br>Amount/date/category are rule-based guesses (no LLM), please confirm or edit before saving.</p>
+
+        <label class="field-label">金額 <span class="field-en">Amount</span></label>
+        <input type="number" inputmode="decimal" step="0.01" class="field-input" id="amountInput" placeholder="0.00" />
+
+        <label class="field-label">商家 / 備註 <span class="field-en">Merchant / Note</span></label>
+        <input type="text" class="field-input" id="merchantInput" placeholder="例如: Woolworths" />
+
+        <label class="field-label">分類 <span class="field-en">Category</span></label>
+        <select class="field-input" id="categorySelect"></select>
+
+        <label class="field-label">日期 <span class="field-en">Date</span></label>
+        <input type="date" class="field-input" id="dateInput" />
+
+        <label class="field-label">備註 <span class="field-en">Note</span></label>
+        <input type="text" class="field-input" id="noteInput" placeholder="選填" />
+
+        <div class="actions-row">
+          <button class="btn" id="saveRecordBtn">
+            <span>儲存紀錄</span>
+            <span class="btn-en">Save Record</span>
+          </button>
+        </div>
+        <p class="save-status" id="saveStatus"></p>
+      </div>
+    </section>
+
+    <!-- ===================== 紀錄清單 ===================== -->
+    <section id="ledgerView" style="display:none;">
+      <div class="card">
+        <div class="search-row">
+          <input type="search" class="field-input" id="searchInput" placeholder="搜尋商家、備註、辨識文字..." />
+          <button class="filter-toggle-btn" id="filterToggleBtn">篩選 Filter</button>
+        </div>
+
+        <div id="filterPanel">
+          <div class="filter-grid">
+            <div>
+              <label class="field-label">類型 <span class="field-en">Type</span></label>
+              <select class="field-input" id="filterType">
+                <option value="all">全部 All</option>
+                <option value="expense">支出 Expense</option>
+                <option value="income">收入 Income</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">分類 <span class="field-en">Category</span></label>
+              <select class="field-input" id="filterCategory">
+                <option value="all">全部分類 All</option>
+              </select>
+            </div>
+            <div class="full">
+              <label class="field-label">日期範圍 <span class="field-en">Date Range</span></label>
+              <div class="filter-range-row">
+                <input type="date" class="field-input" id="filterDateFrom" />
+                <span>~</span>
+                <input type="date" class="field-input" id="filterDateTo" />
+              </div>
+            </div>
+            <div class="full">
+              <label class="field-label">金額範圍 <span class="field-en">Amount Range</span></label>
+              <div class="filter-range-row">
+                <input type="number" class="field-input" id="filterAmountMin" placeholder="最低" />
+                <span>~</span>
+                <input type="number" class="field-input" id="filterAmountMax" placeholder="最高" />
+              </div>
+            </div>
+          </div>
+          <div class="actions-row">
+            <button class="btn secondary" id="filterClearBtn">
+              <span>清除篩選</span>
+              <span class="btn-en">Clear Filters</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="summary-row"><h2>淨支出<span class="h2-en">Net Total</span></h2><span id="ledgerCount"></span></div>
+        <div class="ledger-total-amount" id="ledgerTotal">$0.00</div>
+      </div>
+
+      <div class="card">
+        <div id="ledgerList"></div>
+        <div id="ledgerEmpty">
+          <div>尚無記帳紀錄,先去「新增紀錄」存第一筆吧。</div>
+          <div class="en-caption-muted">No records yet. Go to "Add" to save your first one.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== 紀錄詳情 Modal ===================== -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal-card">
+      <button class="modal-close" id="detailCloseBtn">✕</button>
+      <h3 class="modal-title">紀錄詳情 <span class="field-en">Record Detail</span></h3>
+
+      <img id="detailImage" class="detail-image" style="display:none;" />
+      <div id="detailNoPhoto" class="no-photo-placeholder" style="display:none;">
+        手動輸入,無照片<br><span class="en-caption-muted">Manually entered, no photo</span>
+      </div>
+
+      <label class="field-label">類型 <span class="field-en">Type</span></label>
+      <select class="field-input" id="detailType">
+        <option value="expense">支出 Expense</option>
+        <option value="income">收入 Income</option>
+      </select>
+
+      <label class="field-label">金額 <span class="field-en">Amount</span></label>
+      <input type="number" inputmode="decimal" step="0.01" class="field-input" id="detailAmount" />
+
+      <label class="field-label">商家 / 備註 <span class="field-en">Merchant / Note</span></label>
+      <input type="text" class="field-input" id="detailMerchant" />
+
+      <label class="field-label">分類 <span class="field-en">Category</span></label>
+      <select class="field-input" id="detailCategory"></select>
+
+      <label class="field-label">日期 <span class="field-en">Date</span></label>
+      <input type="date" class="field-input" id="detailDate" />
+
+      <label class="field-label">備註 <span class="field-en">Note</span></label>
+      <input type="text" class="field-input" id="detailNote" />
+
+      <details id="detailOcrDetails">
+        <summary>查看辨識文字 View recognized text</summary>
+        <pre id="detailOcrText"></pre>
+      </details>
+
+      <div class="actions-row">
+        <button class="btn" id="detailSaveBtn">
+          <span>儲存變更</span>
+          <span class="btn-en">Save Changes</span>
+        </button>
+        <button class="btn danger" id="detailDeleteBtn">
+          <span>刪除</span>
+          <span class="btn-en">Delete</span>
+        </button>
+      </div>
+      <p class="save-status" id="detailStatus"></p>
+    </div>
+  </div>
+
+  <!-- ===================== 新增分類 Modal ===================== -->
+  <div id="categoryModal" class="modal-overlay">
+    <div class="modal-card small">
+      <h3 class="modal-title">新增分類 <span class="field-en">New Category</span></h3>
+
+      <label class="field-label">圖示 Emoji</label>
+      <input type="text" class="field-input" id="newCategoryIcon" maxlength="4" placeholder="🏷️" />
+
+      <label class="field-label">名稱 <span class="field-en">Name</span></label>
+      <input type="text" class="field-input" id="newCategoryName" placeholder="例如: 寵物" />
+
+      <label class="field-label">顏色 <span class="field-en">Color</span></label>
+      <input type="color" class="field-input" id="newCategoryColor" value="#A8B5A0" />
+
+      <div class="actions-row">
+        <button class="btn" id="newCategoryConfirmBtn">
+          <span>新增</span>
+          <span class="btn-en">Add</span>
+        </button>
+        <button class="btn secondary" id="newCategoryCancelBtn">
+          <span>取消</span>
+          <span class="btn-en">Cancel</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# Python 虛擬環境
+venv/
+__pycache__/
+*.pyc
+
+# API key 等機密資訊,只留範例檔 .env.example 讓別人知道要填什麼
+.env
+
+# PaddleOCR 官方原始 repo (用 git clone 取得,不需要進版控)
+PaddleOCR/
+
+# 執行過程產生的檔案
+output/
+server/uploads/
+server/output/
+
+# 測試/輸入圖片(依需求決定是否要納入版控)
+samples/*
+!samples/.gitkeep
